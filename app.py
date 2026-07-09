@@ -55,7 +55,7 @@ INDEX_HTML = r"""<!DOCTYPE html>
         <p class="font-medium text-white">下载 Pushover</p>
         <p class="text-sm text-gray-400 mt-1">
           前往 <a href="https://pushover.net" class="text-cyan-400 underline" target="_blank">pushover.net</a> 注册账号，
-          在手机 App Store 搜索 <strong>Pushover</strong> 下载（免费试用 / 付费可选）
+          在手机 App Store 搜索 <strong>Pushover</strong> 下载（免费试用一个月）
         </p>
       </div>
     </div>
