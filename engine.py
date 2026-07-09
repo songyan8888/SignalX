@@ -1,5 +1,7 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+BJ_TZ = timezone(timedelta(hours=8))  # Asia/Shanghai
 from db import is_sent, mark_sent
 from pushover import send_pushover
 from sources import Source
@@ -60,7 +62,7 @@ class SignalEngine:
                 logger.error(f"Pushover send failed for {sig.guid}: {e}")
             mark_sent(sig.guid)
 
-        self.last_check[source.source_id] = datetime.now()
+        self.last_check[source.source_id] = datetime.now(BJ_TZ)
         self.total_pushed += new_count
 
         logger.info(
