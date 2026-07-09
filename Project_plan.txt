@@ -1,0 +1,85 @@
+# 项目名称：NotiBroker (个人规则推送机器人 MVP)
+# 目标：搭建一个极简服务，用户可订阅“特朗普发帖”提醒，通过品牌化推送接收。
+# 技术栈：Python 3.9+, Flask, SQLite, Pushover API, schedule, feedparser, python-dotenv, 面包多支付回调。
+# 部署平台：Railway (支持常驻进程、定时任务)
+# 前端：极简 HTML + Tailwind CSS CDN
+
+## 角色设定
+你是一个资深全栈工程师，现在要一步步实现这个 MVP。你需要：
+- 逐步完成下方的工作流程，每个步骤都要生成相应的代码、配置或指令。
+- 支持并行执行时，你可以同时处理多个独立子任务。
+- **每完成一个逻辑步骤（或每隔约 10 分钟），必须输出一个进度报告，格式为：**
+  "[进度报告] 已完成：<当前步骤描述> | 下一步：<下个步骤> | 预计剩余时间：<分钟>"
+- 代码生成后，给出简要解释，并提示如何本地运行测试。
+- 当所有步骤完成，输出“✅ MVP 全部就绪，可以部署上线”。
+
+## 工作流程（严格按顺序执行，允许并行处已标注）
+
+### 阶段 0：环境与密钥准备
+0.1 创建项目根目录 `notibroker`，初始化虚拟环境 `venv`，激活。
+0.2 安装依赖：`flask`, `requests`, `python-dotenv`, `feedparser`, `schedule`。
+0.3 创建 `.env` 文件，提示用户填入以下密钥（先用占位符）：
+    PUSHOVER_TOKEN=your_pushover_app_token
+    PUSHOVER_GROUP_KEY=your_pushover_group_key
+    MIANBAODUO_CALLBACK_SECRET=your_mianbaoduo_secret
+0.4 创建 `.gitignore`，忽略 `venv/`, `.env`, `*.db`, `__pycache__/`。
+
+### 阶段 1：Pushover 测试推送（后端最小骨架）
+1.1 编写 `app.py`，用 Flask 创建应用，加载 `.env`。
+1.2 添加路由 `GET /test_push`，调用 Pushover API 发送测试消息到群组。
+    - 使用 `requests.post('https://api.pushover.net/1/messages.json', ...)`
+    - 返回 JSON 状态。
+1.3 本地运行 `python app.py` 并测试该路由，手机收到“Hello World”即成功。
+
+[可并行] 1.4 创建一个工具函数文件 `pushover_utils.py`，封装 `send_pushover(message, title)`，便于后续复用。
+
+### 阶段 2：特朗普发帖监控（数据源）
+2.1 创建 `monitor.py`，编写函数 `fetch_trump_posts()`：
+    - 使用 `feedparser` 解析 RSS 源：`https://nitter.net/realDonaldTrump/rss`。
+    - 如果该 RSS 不可用，备用源可设为 `https://rss.app/feeds/...`（需用户提供）或任何有效的特朗普 RSS。
+    - 用 SQLite 存储已发送的帖子 GUID，避免重复推送。
+    - 返回新帖子的列表（标题、链接、摘要）。
+2.2 创建数据库初始化函数 `init_db()`，在首次启动时自动建表 `sent_posts (guid TEXT PRIMARY KEY)`。
+2.3 在 `app.py` 中添加路由 `GET /check`，手动触发一次检查并推送新帖子（调用 `fetch_trump_posts` + `send_pushover`）。
+
+### 阶段 3：定时任务
+3.1 在 `app.py` 中添加后台线程，使用 `schedule` 库每 10 分钟执行一次检查推送逻辑。
+    - 启动 Flask 时自动启动该线程。
+    - 注意：避免多次启动线程（使用 `before_first_request` 或 `atexit`）。
+3.2 可选：添加一个 `/status` 路由，返回最近一次检查时间和下次检查时间，方便调试。
+
+### 阶段 4：前端落地页
+4.1 在 `app.py` 根路由 `GET /` 渲染 HTML 页面。
+4.2 创建 `templates/index.html`，使用 Tailwind CSS CDN，包含：
+    - 品牌名 “NotiBroker”
+    - 简短功能描述：“实时接收特朗普社交动态，无需时刻盯屏”
+    - 安装指引：“第一步：下载通知接收器”（提供 Pushover 下载链接，用你的文案）
+    - 激活按钮：跳转到 Pushover 群组邀请链接（用环境变量 `INVITE_LINK`）。
+4.3 在 `.env` 中添加 `INVITE_LINK`（用户在 Pushover 后台获取的群组邀请 URL）。
+4.4 确保页面在手机上也能正常显示（响应式）。
+
+### 阶段 5：支付集成（面包多）
+5.1 在 `app.py` 中添加路由 `POST /payment/callback`，接收面包多支付成功回调。
+5.2 实现签名验证（参照面包多文档），解析订单号、金额、用户标识（如备注）。
+5.3 将订单信息存入 SQLite 新表 `orders`，并给自己发送一条 Pushover 通知：“有新付费用户：订单号 xxx”。
+5.4 先简化处理：不自动创建群组，仅记录订单并通知你手动完成交付。
+5.5 提示用户在面包多后台配置回调 URL（部署后可得真实地址）。
+
+### 阶段 6：部署配置（Railway）
+6.1 创建 `Procfile`：`web: python app.py`（Railway 自动识别）。
+6.2 创建 `runtime.txt` 指定 Python 版本：`python-3.9.16`。
+6.3 编写简要部署说明，包含如何在 Railway 设置环境变量、连接 GitHub 自动部署。
+6.4 生成一个 `requirements.txt`（通过 `pip freeze > requirements.txt`）。
+
+### 阶段 7：整体联调与文档
+7.1 编写 `README.md`，包含项目介绍、本地运行步骤、部署指南。
+7.2 模拟一次完整流程：用户访问落地页 → 加入群组 → 定时推送新帖 → 支付后你收到提醒。
+7.3 输出最终报告，列出所有环境变量和配置项。
+
+## 进度报告要求
+- 每完成一个子任务（例如 1.1、1.2…），立即输出进度报告。
+- 如果某个步骤不需要生成代码（如配置环境变量），也视为完成并报告。
+- 遇到外部依赖（如 RSS 源不可用）时，给出备选方案并继续。
+- 所有步骤执行完毕后，宣布 MVP 完成。
+
+现在请开始从 0.1 执行。
