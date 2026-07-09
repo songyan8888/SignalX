@@ -150,16 +150,26 @@ def activate():
     if not user_key or len(user_key) != 30:
         return jsonify({"status": "error", "message": "User Key 格式不正确，应为30位字符"})
 
-    # Notify admin (you) to manually add this user to the group
-    send_pushover(
-        message=f"New subscriber User Key:\n{user_key}",
-        title="SignalX — 新用户订阅",
-    )
+    # Auto-add user to Pushover group
+    token = os.getenv("PUSHOVER_TOKEN")
+    group_key = os.getenv("PUSHOVER_USER_KEY")
 
-    return jsonify({
-        "status": "ok",
-        "message": "激活请求已收到！我们会在几分钟内将你加入推送群组，请留意 Pushover 通知。",
-    })
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from pushover_skill import PushoverSkill
+    skill = PushoverSkill(token, group_key)
+
+    result = skill.add_user(group_key, user_key)
+
+    if result.get("status") == 1:
+        send_pushover(
+            message=f"新用户已自动加入群组:\n{user_key}",
+            title="SignalX — 新用户已激活",
+        )
+        return jsonify({"status": "ok", "message": "激活成功！你已加入 SignalX 推送群组，请查看 Pushover 通知。"})
+    else:
+        error_msg = result.get("errors", ["未知错误"])[0]
+        return jsonify({"status": "error", "message": f"添加失败: {error_msg}"})
 
 
 @app.route("/test_push")
