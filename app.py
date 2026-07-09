@@ -9,7 +9,7 @@ import time
 from db import init_db
 from pushover import send_pushover
 from engine import SignalEngine
-from sources.reddit_trump import RedditTrumpSource
+# from sources.reddit_trump import RedditTrumpSource  # disabled
 from sources.wscn_lives import WSCNLivesSource
 
 load_dotenv()
@@ -25,7 +25,7 @@ app = Flask(__name__)
 engine = SignalEngine()
 
 # Register sources
-engine.register(RedditTrumpSource())
+# engine.register(RedditTrumpSource())  # disabled
 engine.register(WSCNLivesSource())
 
 # --- Landing page ---
