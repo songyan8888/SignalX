@@ -41,7 +41,7 @@ INDEX_HTML = r"""<!DOCTYPE html>
   <!-- Brand -->
   <div class="text-center">
     <h1 class="text-5xl font-bold tracking-tight">
-      <span class="text-cyan-400">Signal</span><span class="text-white">X</span>
+      <span class="text-cyan-400">Notify</span><span class="text-white">X</span>
     </h1>
     <p class="text-gray-400 mt-3 text-lg">
       特朗普动态，实时推送到你手机
