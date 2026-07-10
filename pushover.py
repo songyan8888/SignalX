@@ -11,7 +11,7 @@ PUSHOVER_TOKEN = os.getenv("PUSHOVER_TOKEN")
 PUSHOVER_USER_KEY = os.getenv("PUSHOVER_USER_KEY")
 
 
-def send_pushover(message: str, title: str = "SignalX", url: str = "") -> dict:
+def send_pushover(message: str, title: str = "NotifyX", url: str = "") -> dict:
     """Send a push notification via Pushover. Returns the API response as dict."""
     payload = {
         "token": PUSHOVER_TOKEN,

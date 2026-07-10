@@ -1,6 +1,6 @@
-# SignalX — Multi-Source Real-Time Signal Aggregator
+# NotifyX — Multi-Source Real-Time Signal Aggregator
 
-SignalX monitors multiple data sources for Trump-related content and pushes real-time notifications via Pushover.
+NotifyX monitors multiple data sources for Trump-related content and pushes real-time notifications via Pushover.
 
 ## Sources
 
@@ -13,7 +13,7 @@ SignalX monitors multiple data sources for Trump-related content and pushes real
 
 ```bash
 # 1. Clone & enter
-cd SignalX
+cd NotifyX
 
 # 2. Create virtual environment
 python -m venv venv
@@ -52,7 +52,7 @@ python app.py
 ## Architecture
 
 ```
-SignalX/
+NotifyX/
 ├── app.py              # Flask app, routes, background scheduler
 ├── engine.py           # SignalEngine: orchestrates sources → dedup → push
 ├── db.py               # SQLite: sent_signals table

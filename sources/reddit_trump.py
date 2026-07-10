@@ -2,7 +2,7 @@ import feedparser
 from sources import Source, Signal
 
 REDDIT_RSS_URL = "https://www.reddit.com/r/trump/.rss"
-USER_AGENT = "SignalX/1.0"
+USER_AGENT = "NotifyX/1.0"
 
 
 class RedditTrumpSource(Source):

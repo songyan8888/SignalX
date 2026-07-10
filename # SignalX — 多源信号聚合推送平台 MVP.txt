@@ -1,0 +1,117 @@
+# NotifyX — 多源信号聚合推送平台 MVP
+
+## 概述
+
+NotifyX 是一个可插拔的多源信号聚合推送系统。每 10 分钟轮询多个数据源，发现目标内容后通过 Pushover 推送。首期集成 2 个源：Reddit r/trump（特朗普社群动态）+ 华尔街见闻快讯（特朗普相关金融资讯），架构预留扩展接口。
+
+## 核心架构
+
+```
+NotifyX/
+├── app.py                  # Flask 入口 + 路由
+├── engine.py               # 信号引擎：迭代 sources、去重、推送
+├── db.py                   # SQLite：sent_signals 表 + init/query/insert
+├── pushover.py             # send_pushover() 封装
+├── sources/
+│   ├── __init__.py         # Source 抽象基类（接口）
+│   ├── reddit_trump.py     # Reddit r/trump RSS (Atom)
+│   └── wscn_lives.py       # 华尔街见闻快讯 (关键词过滤)
+├── templates/index.html    # 落地页
+├── .env / .gitignore
+└── requirements.txt / Procfile / runtime.txt
+```
+
+**Source 接口**（`sources/__init__.py`）：
+```python
+class Source(ABC):
+    source_id: str                         # 唯一标识，如 "reddit_trump"
+    @abstractmethod
+    def fetch(self) -> list[Signal]: ...   # 返回本轮新信号
+```
+
+每个 Signal 包含：`guid`（唯一 ID）、`title`、`content`、`url`、`source`。
+
+**信号引擎**（`engine.py`）：
+- 注册所有 Source 实例到一个列表
+- `run_all()`：遍历每个 source → `fetch()` → 逐个检查 SQLite `guid` 是否已存在 → 新的入库 + Pushover 推送
+- 去重规则：`guid = f"{source.source_id}:{item_id}"`，确保不同源的相同 ID 不冲突
+
+## 数据源详情
+
+### 源 A：Reddit r/trump
+- **协议**：RSS/Atom，`feedparser` 解析
+- **URL**：`https://www.reddit.com/r/trump/.rss`
+- **请求头**：`User-Agent: NotifyX/1.0`
+- **字段映射**：`entry.id` → guid，`entry.title`，`entry.link` → url，`entry.summary` → content
+- **频率**：每 10 分钟
+
+### 源 B：华尔街见闻快讯
+- **协议**：REST API（无需认证）
+- **URL**：`https://api.wallstreetcn.com/apiv1/content/lives?channel=global-channel&limit=20`
+- **过滤**：在 `content` 字段（HTML 文本）中匹配关键词 `特朗普`、`Trump`、`川普`
+- **字段映射**：`item.id` → guid，`item.title or "华尔街见闻快讯"` → title，内容摘要 → content
+- **去重**：`guid = f"wscn_lives:{item.id}"`
+- **频率**：每 10 分钟
+
+## 实施阶段
+
+### 阶段 0：环境搭建（20 min）
+- 在 `D:\NotifyX` 下初始化 venv
+- 安装：`flask`, `requests`, `python-dotenv`, `feedparser`, `schedule`
+- `.env` 模板：`PUSHOVER_TOKEN`、`PUSHOVER_USER_KEY`、`INVITE_LINK`
+- `.gitignore`：venv/、.env、*.db、__pycache__/
+
+### 阶段 1：基础设施 + Pushover（30 min）
+- `pushover.py`：封装 `send_pushover(message, title, url="")`，用 `requests.post`
+- `db.py`：`init_db()` 建表 `sent_signals(guid TEXT PRIMARY KEY, created_at TIMESTAMP)`，`is_sent(guid)`，`mark_sent(guid)`
+- `sources/__init__.py`：定义 `Source` 抽象基类和 `Signal` 数据类
+- `GET /test_push`：发送 "Hello from NotifyX!" 验证 Pushover 通道
+
+### 阶段 2：源实现 — Reddit（30 min）
+- `sources/reddit_trump.py`：实现 `RedditTrumpSource(Source)`
+  - `fetch()` → 解析 RSS → 遍历 entries → 构造 Signal 列表 → 返回
+- `GET /check/reddit`：手动触发 Reddit 源测试
+
+### 阶段 3：源实现 — 华尔街见闻（30 min）
+- `sources/wscn_lives.py`：实现 `WSCNLivesSource(Source)`
+  - `fetch()` → 请求 API → 遍历 items → 关键词过滤 → 构造 Signal 列表 → 返回
+  - 注意：`content` 是 HTML，过滤前先去掉 HTML 标签
+- `GET /check/wscn`：手动触发华尔街见闻源测试
+
+### 阶段 4：引擎 + 定时 + Web（30 min）
+- `engine.py`：`SignalEngine` 类
+  - `register(source)` / `run_all()` / `run_source(source_id)`
+- `app.py`：Flask 应用
+  - 启动时创建引擎、注册所有 source、启动 schedule 线程（本地调试用）
+  - `GET /`：落地页（Tailwind CSS，NotifyX 品牌）
+  - `GET /check`：手动全量触发
+  - `GET /status`：返回各源状态、最近检查时间、总信号数
+  - 生产环境：Railway Cron Job 直接调 `python -c "from engine import ..."`
+- `templates/index.html`：响应式落地页
+  - 品牌：NotifyX
+  - 描述："多源信号聚合，实时推送特朗普相关动态"
+  - 来源标注：Reddit 社群 + 华尔街见闻快讯
+  - 激活按钮 → `INVITE_LINK`
+
+### 阶段 5：部署 + 文档（20 min）
+- `Procfile`：`web: python app.py`
+- `runtime.txt`：`python-3.11.9`
+- `requirements.txt`：`pip freeze`
+- `README.md`：介绍、本地运行、Railway 部署、环境变量清单、新增源的步骤指南
+
+## 环境变量
+
+```
+PUSHOVER_TOKEN=           # Pushover App Token
+PUSHOVER_USER_KEY=        # Pushover User Key
+INVITE_LINK=              # Pushover 群组邀请链接（落地页用）
+```
+
+## 注意事项
+
+- 所有外发 HTTP 均带 `User-Agent: NotifyX/1.0`
+- SQLite 数据库 `signalx.db` 在项目根目录
+- 华尔街见闻快讯 `content` 含 HTML 标签，过滤关键词前需 `re.sub('<[^>]+>', '', content)` 去标签
+- Pushover 每月免费 10,000 条，足够 MVP 用量
+- 新增数据源只需：在 `sources/` 下新建文件 → 实现 `Source` 子类 → 在 `app.py` 中 `engine.register()`
+- 支付（面包多）延后至 V2

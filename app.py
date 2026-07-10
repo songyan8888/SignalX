@@ -32,7 +32,7 @@ INDEX_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SignalX — 特朗普动态实时推送</title>
+<title>NotifyX — 特朗普动态实时推送</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen flex items-center justify-center p-4">
@@ -164,9 +164,9 @@ def activate():
     if result.get("status") == 1:
         send_pushover(
             message=f"新用户已自动加入群组:\n{user_key}",
-            title="SignalX — 新用户已激活",
+            title="NotifyX — 新用户已激活",
         )
-        return jsonify({"status": "ok", "message": "激活成功！你已加入 SignalX 推送群组，请查看 Pushover 通知。"})
+        return jsonify({"status": "ok", "message": "激活成功！你已加入 NotifyX 推送群组，请查看 Pushover 通知。"})
     else:
         error_msg = result.get("errors", ["未知错误"])[0]
         return jsonify({"status": "error", "message": f"添加失败: {error_msg}"})
@@ -175,8 +175,8 @@ def activate():
 @app.route("/test_push")
 def test_push():
     result = send_pushover(
-        message="Hello from SignalX! If you see this, push notifications are working.",
-        title="SignalX Test",
+        message="Hello from NotifyX! If you see this, push notifications are working.",
+        title="NotifyX Test",
     )
     return jsonify(result)
 

@@ -8,7 +8,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 WSCN_LIVES_URL = "https://api.wallstreetcn.com/apiv1/content/lives"
 WSCN_CHANNEL = "global-channel"
-USER_AGENT = "SignalX/1.0"
+USER_AGENT = "NotifyX/1.0"
 KEYWORDS = ["特朗普", "Trump", "川普"]
 MAX_AGE_SECONDS = 300  # only push items from the last 5 minutes
 
